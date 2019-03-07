@@ -228,7 +228,10 @@ exports.init = function(grunt) {
       sourceMap: outputOptions.source_map
     };
 
-    grunt.file.write(cachedFile, JSON.stringify(result));
+    if (options.hashCacheFolder) {
+        grunt.file.write(cachedFile, JSON.stringify(result));
+    }
+
 
     grunt.verbose.ok();
 
