@@ -14,6 +14,7 @@ var UglifyJS = require('uglify-js');
 var _ = require('lodash');
 var uriPath = require('uri-path');
 var getOutputOptions;
+var crypto = require('crypto');
 
 exports.init = function(grunt) {
   var exports = {};
@@ -32,6 +33,27 @@ exports.init = function(grunt) {
 
     var outputOptions = getOutputOptions(options, dest);
     var output = UglifyJS.OutputStream(outputOptions);
+
+    // calculate md5 hash for source
+    files.forEach(function(file) {
+      var code = grunt.file.read(file);
+      totalCode += code;
+    });
+    var hash = crypto.createHash('md5');
+    hash.update(totalCode);
+    var hex = hash.digest('hex');
+    totalCode = '';
+
+    // checking cache ...
+    var cachedFile = `${options.hashCacheFolder}/${dest.replace(/\//g, '-')}`;
+    if (options.hashCacheFolder && grunt.file.exists(cachedFile)) {
+        var cachedFileData = JSON.parse(grunt.file.read(cachedFile));
+        if (cachedFileData.hex === hex) {
+            grunt.log.ok('File ' + dest + ' was loaded from cache.');
+            return cachedFileData;
+        }
+    }
+
 
     // Grab and parse all source files
     files.forEach(function(file) {
@@ -202,8 +224,11 @@ exports.init = function(grunt) {
     var result = {
       max: totalCode,
       min: min,
+      hex: hex,
       sourceMap: outputOptions.source_map
     };
+
+    grunt.file.write(cachedFile, JSON.stringify(result));
 
     grunt.verbose.ok();
 
